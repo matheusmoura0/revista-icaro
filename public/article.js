@@ -1,0 +1,10 @@
+import {fetchEdition,safeUrl} from './data.js';
+import {el,categoryLabel,picture,credit,contentFragment,menu,analytics,plain} from './shared.js';
+const id=new URLSearchParams(location.search).get('id'),root=document.getElementById('article'),status=document.getElementById('status'),retry=document.getElementById('retry');let busy=false,signature='';
+menu(category=>{location.href='index.html'+(category==='Todas'?'':'?editoria='+encodeURIComponent(category))});
+async function refresh(){if(busy)return;busy=true;try{const items=await fetchEdition(),a=items.find(a=>a.id===id);retry.hidden=true;if(!a){root.replaceChildren();root.hidden=true;signature='';status.hidden=false;status.textContent='Esta matéria não está disponível nesta publicação.';document.querySelector('meta[name=robots]').content='noindex';return}
+ const next=JSON.stringify(a);if(next!==signature){root.replaceChildren(el('p',categoryLabel(a),'kicker'),el('h1',a.title));if(a.description)root.append(el('p',plain(a.description)));root.append(el('p',a.author||a.publisher||'','credit'));const img=picture(a);if(img){img.loading='eager';root.append(img);if(a.image_credit)root.append(el('p',a.image_credit,'credit'))}root.append(credit(a));const content=el('div','','article-content');content.append(contentFragment(a.content));root.append(content,credit(a));document.title=a.title+' | Revista Ícaro';document.querySelector('meta[name=description]').content=plain(a.description||a.title).slice(0,200);document.querySelector('link[rel=canonical]').href=safeUrl(a.canonical_url)||'https://revistaicaro.com.br/materia.html?id='+encodeURIComponent(a.id);document.querySelector('meta[name=robots]').content='index,follow';signature=next}
+ root.hidden=false;status.hidden=true;analytics(a);
+ }catch{status.hidden=false;status.textContent=signature?'Não foi possível verificar atualizações agora.':'Não foi possível carregar a matéria.';retry.hidden=false}finally{busy=false}}
+retry.addEventListener('click',refresh);if(id)refresh();else{status.textContent='Selecione uma matéria na página inicial.';retry.hidden=true}
+setInterval(()=>{if(id&&document.visibilityState==='visible')refresh()},60000);
